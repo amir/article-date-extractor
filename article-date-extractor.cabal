@@ -1,0 +1,27 @@
+name:                article-date-extractor
+version:             0.1.0.0
+synopsis:            Article Date Extractor
+description:         Extracts an online article's publication date 
+homepage:            http://github.com/amir/article-date-extractor
+license:             PublicDomain
+license-file:        UNLICENSE
+author:              Amir Mohammad Saeid
+maintainer:          amir@glgdgt.com
+copyright:           2016 Amir Mohammad Saeid
+category:            Web
+build-type:          Simple
+cabal-version:       >=1.10
+
+library
+  exposed-modules:      Web.ArticleDateExtractor
+  hs-source-dirs:       src
+  build-depends:        base >= 4.6 && <5
+                      , hxt == 9.3.1.*
+                      , HandsomeSoup == 0.4.*
+                      , curl == 1.3.*
+                      , time == 1.5.0.1
+  default-language:     Haskell2010
+
+source-repository head
+  type: git
+  location: https://github.com/amir/article-date-extractor
