@@ -1,12 +1,17 @@
-module Web.ArticleDateExtractor where
+module Web.ArticleDateExtractor
+  (
+    fromUrl,
+    fromHtml
+  ) where
 
-import Data.Maybe (listToMaybe, mapMaybe)
-import Data.Time (LocalTime)
-import Data.Time.Format (parseTimeM, defaultTimeLocale, ParseTime)
 import Text.XML.HXT.Core
-import Text.HandsomeSoup hiding (fromUrl)
+import Control.Applicative
+import Data.Time (LocalTime)
 import Network.Curl (curlGetString)
+import Data.Maybe (listToMaybe, mapMaybe)
+import Text.HandsomeSoup hiding (fromUrl)
 import Network.Curl.Opts (CurlOption (CurlFollowLocation))
+import Data.Time.Format (parseTimeM, defaultTimeLocale, ParseTime)
 
 readUrl :: String -> IO String
 readUrl url = do
@@ -43,8 +48,13 @@ extractFromBody doc = runX $ doc >>>
     (css "span" >>> hasAttrValue "itemprop" (== "datePublished") >>> getText)
   )
 
+parseTime :: String -> String -> Maybe LocalTime
+parseTime f t = (parseTimeM True) defaultTimeLocale f t :: Maybe LocalTime
+
 parseDates :: [String] -> [LocalTime]
-parseDates t = mapMaybe (\x -> (parseTimeM True) defaultTimeLocale "%Y-%m-%d %H:%M:%S" x :: Maybe LocalTime) t
+parseDates ds = mapMaybe (\d ->
+                              (parseTime "%Y-%m-%d %H:%M:%S" d) <|> (parseTime "%Y-%m-%dT%H:%M:%S%Z" d)
+                        ) ds
 
 fromHtml :: String -> IO(Maybe LocalTime)
 fromHtml html = do
