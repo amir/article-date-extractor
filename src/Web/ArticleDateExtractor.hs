@@ -40,8 +40,6 @@ extractFromHead doc = runX $ doc >>> css "meta" >>>
     (hasAttrValue' "name"       "date_published"                ) <+>
     (hasAttrValue' "itemprop"   "datepublished"                 ) <+>
     (hasAttrValue' "itemprop"   "datecreated"                   ) <+>
-    (hasAttrValue' "property"   "og:image"                      ) <+>
-    (hasAttrValue' "itemprop"   "image"                         ) <+>
     (hasAttrValue' "name"       "created"                       ) <+>
     (hasAttrValue' "http-equiv" "date")
 
