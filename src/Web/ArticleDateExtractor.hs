@@ -12,7 +12,7 @@ import Network.Curl (curlGetString)
 import Data.Maybe (listToMaybe, mapMaybe)
 import Text.HandsomeSoup hiding (fromUrl)
 import Network.Curl.Opts (CurlOption (CurlFollowLocation))
-import Data.Time.Format (parseTimeM, defaultTimeLocale, ParseTime)
+import Data.Time.Format (parseTimeM, defaultTimeLocale)
 
 readUrl :: String -> IO String
 readUrl url = do
@@ -41,8 +41,7 @@ extractFromHead doc = runX $ doc >>> css "meta" >>>
     (hasAttrValue' "itemprop"   "datepublished"                 ) <+>
     (hasAttrValue' "itemprop"   "datecreated"                   ) <+>
     (hasAttrValue' "name"       "created"                       ) <+>
-    (hasAttrValue' "http-equiv" "date")
-
+    (hasAttrValue' "http-equiv" "date"                          )
   ) >>> getAttrValue "content"
 
 extractFromBody doc = runX $ doc >>>
@@ -57,7 +56,7 @@ parseTime f t = (parseTimeM True) defaultTimeLocale f t :: Maybe UTCTime
 parseDates :: [String] -> [UTCTime]
 parseDates ds = mapMaybe (\d ->
                               (parseTime "%Y-%m-%d"             d)  <|>
-                              (parseTime "%B %d, %Y"            d)  <|>
+                              (parseTime "%B %e, %Y"            d)  <|>
                               (parseTime "%Y-%m-%d %H:%M:%S"    d)  <|>
                               (parseTime "%Y-%m-%dT%H:%M:%S%Z"  d)  <|>
                               (parseTime "%B %k, %Y, %H:%M %p"  d)
