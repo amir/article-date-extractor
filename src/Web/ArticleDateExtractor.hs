@@ -1,9 +1,12 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Web.ArticleDateExtractor
   (
     fromUrl,
     fromHtml
   ) where
 
+import Data.Aeson
 import Text.XML.HXT.Core
 import Data.Char (toLower)
 import Control.Applicative
@@ -13,6 +16,14 @@ import Data.Maybe (listToMaybe, mapMaybe)
 import Text.HandsomeSoup hiding (fromUrl)
 import Network.Curl.Opts (CurlOption (CurlFollowLocation))
 import Data.Time.Format (parseTimeM, defaultTimeLocale)
+import qualified Data.ByteString.Lazy.Char8 as C
+
+data ArticleContext = ArticleContext { datePublished :: String }
+                      deriving (Show)
+
+instance FromJSON ArticleContext where
+  parseJSON (Object v)  = ArticleContext <$> v .: "datePublished"
+  parseJSON _           = empty
 
 readUrl :: String -> IO String
 readUrl url = do
@@ -21,6 +32,13 @@ readUrl url = do
 
 hasAttrValue' :: ArrowXml a => String -> String -> a XmlTree XmlTree
 hasAttrValue' a v = (hasAttrValue a (map toLower >>> (== v)))
+
+extractFromLdJson doc = runX $ doc                  >>>
+      css "script"                                  >>>
+      (hasAttrValue' "type" "application/ld+json")  >>>
+      getChildren                                   >>>
+      getText                                       >>.
+      (map C.pack)
 
 extractFromHead doc = runX $ doc >>> css "meta" >>>
   (
@@ -53,21 +71,27 @@ extractFromBody doc = runX $ doc >>>
 parseTime :: String -> String -> Maybe UTCTime
 parseTime f t = (parseTimeM True) defaultTimeLocale f t :: Maybe UTCTime
 
+extractPublishedDates :: [C.ByteString] -> [String]
+extractPublishedDates a = map datePublished $ mapMaybe (decode) a
+
 parseDates :: [String] -> [UTCTime]
 parseDates ds = mapMaybe (\d ->
-                              (parseTime "%Y-%m-%d"             d)  <|>
-                              (parseTime "%B %e, %Y"            d)  <|>
-                              (parseTime "%Y-%m-%d %H:%M:%S"    d)  <|>
-                              (parseTime "%Y-%m-%dT%H:%M:%S%Z"  d)  <|>
-                              (parseTime "%B %k, %Y, %H:%M %p"  d)
+                              (parseTime "%Y-%m-%d"                 d)  <|>
+                              (parseTime "%B %e, %Y"                d)  <|>
+                              (parseTime "%Y-%m-%d %H:%M:%S"        d)  <|>
+                              (parseTime "%Y-%m-%dT%H:%M:%S%Z"      d)  <|>
+                              (parseTime "%B %k, %Y, %H:%M %p"      d)  <|>
+                              (parseTime "%Y-%m-%d %H:%M:%S.000000" d)
                         ) ds
 
 fromHtml :: String -> IO(Maybe UTCTime)
 fromHtml html = do
   doc       <- return $ parseHtml html
+  scripts   <- extractFromLdJson doc
+  ldJson    <- return $ extractPublishedDates scripts
   heads     <- extractFromHead doc
   bodies    <- extractFromBody doc
-  return $ listToMaybe $ parseDates $ heads ++ bodies
+  return $ listToMaybe $ parseDates $ heads ++ bodies ++ ldJson
 
 fromUrl :: String -> IO(Maybe UTCTime)
 fromUrl url = do
